@@ -149,7 +149,6 @@ function M.git_checkout(picker, item)
   picker:close()
   if item then
     local what = item.branch or item.commit
-    what = item.detached and item.commit or what
     if not what then
       Snacks.notify.warn("No branch or commit found", { title = "Snacks Picker" })
       return

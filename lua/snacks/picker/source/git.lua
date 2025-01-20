@@ -164,32 +164,15 @@ function M.branches(opts)
   local cwd = vim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
   cwd = Snacks.git.get_root(cwd)
 
-  ---@param text string
-  local function parse(text)
-    local pattern_hash = "[a-zA-Z0-9]+"
-
-    local patterns = {
+  local pattern_hash = "[a-zA-Z0-9]+"
+  local patterns = {
     -- stylua: ignore start
     --- e.g. "* (HEAD detached at f65a2c8) f65a2c8 chore(build): auto-generate docs"
     "^(.)%s(%(HEAD detached at " .. pattern_hash .. "%))%s+(" .. pattern_hash .. ")%s*(.*)$",
     --- e.g. "  main                       d2b2b7b [origin/main: behind 276] chore(build): auto-generate docs"
     "^(.)%s(%S+)%s+(".. pattern_hash .. ")%s*(.*)$",
-      -- stylua: ignore end
-    } ---@type string[]
-    vim.print("patterns")
-    vim.print(patterns)
-
-    local status, branch, commit, msg, detached ---@type string|nil, string|nil, string|nil, string|nil, boolean
-    for index, pattern in ipairs(patterns) do
-      status, branch, commit, msg = text:match(pattern)
-      if status then
-        detached = index == 1
-        break
-      end
-    end
-
-    return { status = status, branch = branch, commit = commit, msg = msg, detached = detached }
-  end
+    -- stylua: ignore end
+  } ---@type string[]
 
   return require("snacks.picker.source.proc").proc(vim.tbl_deep_extend("force", {
     cwd = cwd,
@@ -197,13 +180,21 @@ function M.branches(opts)
     args = args,
     ---@param item snacks.picker.finder.Item
     transform = function(item)
-      local result = parse(item.text)
       item.cwd = cwd
-      item.current = result.status == "*"
-      item.branch = result.branch
-      item.commit = result.commit
-      item.msg = result.msg
-      item.detached = result.detached
+      for p, pattern in ipairs(patterns) do
+        local status, branch, commit, msg = item.text:match(pattern)
+        if status then
+          local detached = p == 1
+          item.current = status == "*"
+          item.branch = not detached and branch or nil
+          item.commit = commit
+          item.msg = msg
+          item.detached = detached
+          return
+        end
+      end
+      Snacks.notify.warn("failed to parse branch: " .. item.text)
+      return false -- skip items we could not parse
     end,
   }, opts or {}))
 end
