@@ -192,7 +192,7 @@ function M.cmd(cmd, ctx, opts)
       if not killed and code ~= 0 then
         Snacks.notify.error(
           ("Terminal **cmd** `%s` failed with code `%d`:\n- `vim.o.shell = %q`\n\nOutput:\n%s"):format(
-            cmd,
+            type(cmd) == "table" and table.concat(cmd, " ") or cmd,
             code,
             vim.o.shell,
             vim.trim(table.concat(output, ""))
@@ -254,7 +254,7 @@ function M.git_log(ctx)
     "--color=never",
     "--no-show-signature",
     "--no-patch",
-    ctx.item.branch,
+    ctx.item.commit,
   }
   if not native then
     table.insert(cmd, 2, "--no-pager")

@@ -163,18 +163,47 @@ function M.branches(opts)
   local args = { "--no-pager", "branch", "--no-color", "-vvl" }
   local cwd = vim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
   cwd = Snacks.git.get_root(cwd)
+
+  ---@param text string
+  local function parse(text)
+    local pattern_hash = "[a-zA-Z0-9]+"
+
+    local patterns = {
+    -- stylua: ignore start
+    --- e.g. "* (HEAD detached at f65a2c8) f65a2c8 chore(build): auto-generate docs"
+    "^(.)%s(%(HEAD detached at " .. pattern_hash .. "%))%s+(" .. pattern_hash .. ")%s*(.*)$",
+    --- e.g. "  main                       d2b2b7b [origin/main: behind 276] chore(build): auto-generate docs"
+    "^(.)%s(%S+)%s+(".. pattern_hash .. ")%s*(.*)$",
+      -- stylua: ignore end
+    } ---@type string[]
+    vim.print("patterns")
+    vim.print(patterns)
+
+    local status, branch, commit, msg, detached ---@type string|nil, string|nil, string|nil, string|nil, boolean
+    for index, pattern in ipairs(patterns) do
+      status, branch, commit, msg = text:match(pattern)
+      if status then
+        detached = index == 1
+        break
+      end
+    end
+
+    return { status = status, branch = branch, commit = commit, msg = msg, detached = detached }
+  end
+
   return require("snacks.picker.source.proc").proc(vim.tbl_deep_extend("force", {
     cwd = cwd,
     cmd = "git",
     args = args,
     ---@param item snacks.picker.finder.Item
     transform = function(item)
-      local status, branch, commit, msg = item.text:match("^(.)%s(%S+)%s+([a-zA-Z0-9]+)%s*(.*)$")
+      local result = parse(item.text)
       item.cwd = cwd
-      item.current = status == "*"
-      item.branch = branch
-      item.commit = commit
-      item.msg = msg
+      item.current = result.status == "*"
+      item.branch = result.branch
+      item.commit = result.commit
+      item.msg = result.msg
+      item.detached = result.detached
     end,
   }, opts or {}))
 end
