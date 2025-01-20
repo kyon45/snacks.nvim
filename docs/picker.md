@@ -526,6 +526,10 @@ It's a previewer that shows a preview based on the item data.
 ---@field filter snacks.picker.Filter
 ```
 
+```lua
+---@alias snacks.picker.history.Record {pattern: string, search: string, live?: boolean}
+```
+
 ## 📦 Module
 
 ```lua
@@ -1847,8 +1851,7 @@ Snacks.picker.actions.toggle_preview(picker)
 ---@field start_time number
 ---@field title string
 ---@field closed? boolean
----@field hist_idx number
----@field hist_cursor number
+---@field history snacks.picker.History
 ---@field visual? snacks.picker.Visual
 local M = {}
 ```

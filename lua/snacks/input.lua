@@ -86,27 +86,33 @@ local ui_input = vim.ui.input
 ---@field win? snacks.win
 local ctx = {}
 
-local history = {} ---@type string[]
-
 ---@param opts? snacks.input.Opts
 ---@param on_confirm fun(value?: string)
 function M.input(opts, on_confirm)
   assert(type(on_confirm) == "function", "`on_confirm` must be a function")
 
+  local history = require("snacks.picker.util.history").new("input", {
+    filter = function(value)
+      return value ~= ""
+    end,
+  })
+
   local parent_win = vim.api.nvim_get_current_win()
   local mode = vim.fn.mode()
 
-  local hist_idx = #history + 1
-  local hist_cursor = hist_idx
-
-  local function record()
+  ---@param force? boolean
+  local function record(force)
     if not ctx.win then
       return
     end
-    local text = ctx.win:text()
-    if text and not text:find("^%s*$") then
-      history[hist_idx] = text
+    if not force and not history:is_current() then
+      return
     end
+    local text = vim.trim(ctx.win:text())
+    if text == "" then
+      return
+    end
+    history:record(text)
   end
 
   local function confirm(value)
@@ -148,7 +154,9 @@ function M.input(opts, on_confirm)
     table.insert(title, { " " })
   end
 
+  ---@param text? string
   local function set(text)
+    text = text or ""
     vim.api.nvim_buf_set_lines(ctx.win.buf, 0, -1, false, { text })
     vim.api.nvim_win_set_cursor(ctx.win.win, { 1, #text })
   end
@@ -177,18 +185,12 @@ function M.input(opts, on_confirm)
         self:close()
       end,
       hist_up = function(self)
-        if hist_idx == hist_cursor then
-          record()
-        end
-        hist_cursor = math.max(hist_cursor - 1, 1)
-        set(history[hist_cursor] or "")
+        record()
+        set(history:prev())
       end,
       hist_down = function(self)
-        if hist_idx == hist_cursor then
-          record()
-        end
-        hist_cursor = math.min(hist_cursor + 1, hist_idx)
-        set(history[hist_cursor] or "")
+        record()
+        set(history:next())
       end,
       cmp = function()
         return vim.fn.pumvisible() == 0 and "<c-x><c-u>"
