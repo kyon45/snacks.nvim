@@ -43,6 +43,12 @@ function M.new(picker)
   return self
 end
 
+---@param cwd string
+function M:set_cwd(cwd)
+  self.cwd = cwd
+  self.cwd = vim.fs.normalize(self.cwd --[[@as string]], { _fast = true })
+end
+
 ---@param opts? {trim?:boolean}
 ---@return snacks.picker.Filter
 function M:clone(opts)

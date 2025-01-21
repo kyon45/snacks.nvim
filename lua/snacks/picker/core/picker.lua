@@ -592,6 +592,15 @@ function M:hist_record(force)
   })
 end
 
+function M:cwd()
+  return self.input.filter.cwd
+end
+
+function M:set_cwd(cwd)
+  self.input.filter:set_cwd(cwd)
+  self.opts.cwd = cwd
+end
+
 --- Move the history cursor
 ---@param forward? boolean
 function M:hist(forward)
